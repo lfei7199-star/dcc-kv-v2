@@ -5,6 +5,7 @@
 - 后端：纯 Python + 标准库，`float64`。**没有任何 CUDA、没有 torch、没有 numpy**
   （本机装不上：PyPI 与清华镜像均返回 `No matching distribution`）。
 - 判据：`tests/` 下 350 个 unittest，全部在 CPU 上跑，`OK`（108 + 88 记录规范 + 59 Q8 + 95 pilot）。
+  干净克隆中其中 1 例（回读本地冻结链常量做交叉核对）**显式 skip**，不静默通过。
 - 权威边界：本目录代码**不构成 2A 通过**。`accept.evaluate()` 在 CPU 上最高只能返回
   `BLOCKED_CPU_NO_GPU_EVIDENCE`；`two_d.evaluate()` 最高只能返回 `PASS_CPU_SEMANTICS`。
   两者都不会返回裸 `PASS`——这是刻意的。

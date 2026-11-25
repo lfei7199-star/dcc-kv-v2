@@ -96,6 +96,10 @@ python -m unittest discover -s tests -p "test_*.py"
 
 实测：**Ran 350 tests, OK**（约 8 s，纯 `unittest`，无 pytest 依赖，无 GPU）。
 
+其中 1 例（`test_q8.TestBoundaryPositions.test_matches_the_execution_document`）需要回读本地冻结链里的
+常量文件做交叉核对。该文件不在本仓库，因此在干净克隆中这一例**显式 skip**（349 pass + 1 skip），
+不会被静默当作通过。
+
 | 测试文件 | 用例 |
 |---|---|
 | `test_2a_sp.py` | 11 |
