@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "status": "timing_only",
+    "note": "wall clock of the pure-Python CPU reference on this machine; NOT a GPU number and NOT a quality result",
+    "backend": "cpu_ref_f64",
+    "d_model": 8,
+    "source_len": 512,
+    "budgets": [
+      16,
+      32,
+      64,
+      96,
+      128,
+      192,
+      256
+    ],
+    "n_ref_rule": "2t"
+  },
+  "rows": [
+    {
+      "t": 16,
+      "n_ref": 32,
+      "seconds": 0.058388000004924834,
+      "beta_cond": 3.927274520284605,
+      "value_cond": 20.29220493941407
+    },
+    {
+      "t": 32,
+      "n_ref": 64,
+      "seconds": 0.13785410003038123,
+      "beta_cond": 4.6182227661263555,
+      "value_cond": 35.55754367340303
+    },
+    {
+      "t": 64,
+      "n_ref": 128,
+      "seconds": 0.36942519998410717,
+      "beta_cond": 6.995096180717982,
+      "value_cond": 1730.6433846121895
+    },
+    {
+      "t": 96,
+      "n_ref": 192,
+      "seconds": 0.7867464000009932,
+      "beta_cond": 11.96134949475572,
+      "value_cond": 2450.119890812023
+    },
+    {
+      "t": 128,
+      "n_ref": 256,
+      "seconds": 1.4410310999955982,
+      "beta_cond": 16.187501821269848,
+      "value_cond": 2934.1816532069183
+    },
+    {
+      "t": 192,
+      "n_ref": 384,
+      "seconds": 4.001864899997599,
+      "beta_cond": 33.61699883702744,
+      "value_cond": 3861.558470584396
+    },
+    {
+      "t": 256,
+      "n_ref": 512,
+      "seconds": 8.751370200014208,
+      "beta_cond": 35.116910901503275,
+      "value_cond": 4211.283474144866
+    }
+  ],
+  "fit": {
+    "local_exponents": [
+      {
+        "from_t": 16,
+        "to_t": 32,
+        "exponent": 1.2393983766549026
+      },
+      {
+        "from_t": 32,
+        "to_t": 64,
+        "exponent": 1.4221401053820777
+      },
+      {
+        "from_t": 64,
+        "to_t": 96,
+        "exponent": 1.8644210337792482
+      },
+      {
+        "from_t": 96,
+        "to_t": 128,
+        "exponent": 2.1037397731856506
+      },
+      {
+        "from_t": 128,
+        "to_t": 192,
+        "exponent": 2.519086249418315
+      },
+      {
+        "from_t": 192,
+        "to_t": 256,
+        "exponent": 2.7198420751721324
+      }
+    ],
+    "exponent_used": 2.7198420751721324,
+    "exponent_last_pair": 2.7198420751721324,
+    "target_t": 1637,
+    "extrapolated_seconds_per_edge": 1360.6565006513758,
+    "extrapolated_seconds_per_3_edges": 4081.9695019541277,
+    "extrapolated_seconds_per_edge_last_pair": 1360.6565006513758,
+    "caveat": "extrapolation from t<=256. The Householder QR is O(n_ref t^2) with n_ref=2t, so the asymptotic cost is cubic; the exponent is fitted from measurement because lower-order terms dominate at small t. Treat the result as an order of magnitude, and treat the larger of the two estimates as the planning figure."
+  }
+}

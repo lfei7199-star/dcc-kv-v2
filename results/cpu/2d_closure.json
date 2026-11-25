@@ -1,0 +1,2186 @@
+{
+  "meta": {
+    "status": "PASS_CPU_SEMANTICS",
+    "scope": "CPU construction semantics only",
+    "note": "CPU construction semantics only. No process, no NCCL, no all_to_all_v, no real checkpoint. Not a paper result.",
+    "chain": "AM-HighestAttnKeys: softmax-RMS select, box beta [-3,3] iters=2, OLS value",
+    "backend": "cpu_ref_f64",
+    "dtype_bytes": 8,
+    "L_source_tokens": 96,
+    "d_model": 8,
+    "budgets_per_edge": [
+      6,
+      8,
+      10
+    ],
+    "n_ref_rule": "2t per edge",
+    "n_heldout_per_destination": 6,
+    "seed": 20261125,
+    "world_size_2a": 4,
+    "tolerance_2a": 1e-09,
+    "tolerance_2a_source": "test_value",
+    "script_sha256": "48e3fd5ee2aab725567789c6baf53456927df77dfab0e135d22de99739d30ccc",
+    "record_schema": "dcckv-edge-record/1",
+    "envelope_schema": "dcckv-experiment-record/1",
+    "definitions": {
+      "bind_tol": 1e-06,
+      "bind_rule": "a key is on a bound when |beta_j - bound| <= bind_tol, in beta units",
+      "dead_rel": 1e-06,
+      "dead_rule": "per retained key j: c_j = w_j * sum_i A_ij; c_j < DEAD_REL * sum_j c_j. The denominator is the sum over retained keys only, and A is the beta design matrix stacked over all n_ref calibration queries.",
+      "mass_residual_agg": "pooled_over_all_calibration_queries",
+      "mass_residual_rule": "||A w - m||_2 / ||m||_2 where A and m are stacked over ALL n_ref calibration queries and the norm is taken once over the stacked vector; it is NOT a mean of per-query ratios",
+      "beta_design": "A in R^(n_ref x t), A_ij = exp(q_i . C_k_j / sqrt(d)) after a per-row max shift; target m_i = sum over ALL source keys of exp(q_i . K / sqrt(d))",
+      "value_design": "X in R^(n_ref x t), X_ij = softmax_j(q_i . C_k_j / sqrt(d) + beta_j); target Y = dense attention output on the same queries",
+      "payload": "per edge: t*dk*dtype + t*dv*dtype (keys, values) + t*dtype (beta) + t*index_bytes (indices) + meta_bytes. No cross-edge total is defined."
+    },
+    "solver_policy": {
+      "fallback": "",
+      "on_failure": "raise_and_record",
+      "solve_separate_from_diagnose": true,
+      "note": "CUDA torch.linalg.lstsq only supports driver='gels', which assumes full rank and does not return a usable rank. A GPU run must obtain rank/cond from a separate diagnostic pass and record both. A failed solve is recorded as failed; switching to ridge/pinv is forbidden."
+    },
+    "requirement_table": {
+      "rank_topology": {
+        "2A": "required",
+        "2C": "required_evidence",
+        "2D": "required_evidence"
+      },
+      "owner_kv_resident": {
+        "2A": "required",
+        "2C": "required_evidence",
+        "2D": "required_evidence"
+      },
+      "remote_staging": {
+        "2A": "required",
+        "2C": "required_evidence",
+        "2D": "required_evidence"
+      },
+      "no_full_copy": {
+        "2A": "required",
+        "2C": "required_evidence",
+        "2D": "required_evidence"
+      },
+      "communication": {
+        "2A": "required_evidence",
+        "2C": "required_evidence",
+        "2D": "required_evidence"
+      },
+      "beta_binding": {
+        "2A": "forbidden",
+        "2C": "required",
+        "2D": "required"
+      },
+      "beta_value_rank_cond": {
+        "2A": "forbidden",
+        "2C": "required",
+        "2D": "required"
+      },
+      "mass_residual": {
+        "2A": "forbidden",
+        "2C": "required",
+        "2D": "required"
+      },
+      "destination_semantics": {
+        "2A": "forbidden",
+        "2C": "forbidden",
+        "2D": "required"
+      }
+    }
+  },
+  "verdict": {
+    "overall": "PASS_CPU_SEMANTICS",
+    "scope": "CPU construction semantics only",
+    "blocked_requires_gpu": [
+      "2D-06b",
+      "2D-08"
+    ],
+    "checks": [
+      {
+        "id": "2D-01",
+        "status": "PASS_CPU_SEMANTICS",
+        "detail": {
+          "note": "identical queries on every destination",
+          "payload_digest": "87ade3230313a6a465b8ba747464b1e0ccffed2e0b50011dab4ffb22db80644a",
+          "per_edge": [
+            {
+              "edge": 1,
+              "indices_identical": true,
+              "max_abs_beta_diff": 0.0,
+              "max_abs_value_diff": 0.0,
+              "tolerance": 1e-12,
+              "ok": true
+            },
+            {
+              "edge": 2,
+              "indices_identical": true,
+              "max_abs_beta_diff": 0.0,
+              "max_abs_value_diff": 0.0,
+              "tolerance": 1e-12,
+              "ok": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "2D-02",
+        "status": "PASS_CPU_SEMANTICS",
+        "detail": {
+          "edges": 3,
+          "distinct_payloads": 3,
+          "distinct_key_sets": 3,
+          "payload_digests": [
+            "da0560d40542be75344f3ae43bbec50a4109a1eb15406ac442466b3959515fab",
+            "575966328f39723ff3b28502d4246baa967e3cf8f70a601afa6a01dbc99ab109",
+            "db8d3d5c4c8970b7b0e34f4bb05f7e19fe60558be9f70302f12607615c1e456c"
+          ],
+          "note": "edges built from separate calibration pools"
+        }
+      },
+      {
+        "id": "2D-03a",
+        "status": "PASS_CPU_SEMANTICS",
+        "detail": {
+          "n_calib": 12,
+          "n_heldout": 6,
+          "intersection": []
+        }
+      },
+      {
+        "id": "2D-03b",
+        "status": "PASS_CPU_SEMANTICS",
+        "detail": {
+          "payload_digest_a": "da0560d40542be75344f3ae43bbec50a4109a1eb15406ac442466b3959515fab",
+          "payload_digest_b": "da0560d40542be75344f3ae43bbec50a4109a1eb15406ac442466b3959515fab",
+          "heldout_pools_differ": true,
+          "note": "the check is vacuous unless the held-out pools differ"
+        }
+      },
+      {
+        "id": "2D-04",
+        "status": "PASS_CPU_SEMANTICS",
+        "detail": {
+          "per_edge": [
+            {
+              "edge": 0,
+              "expected": 6,
+              "budget": 6,
+              "record_budget": 6,
+              "payload_bytes": 872,
+              "ok": true
+            },
+            {
+              "edge": 1,
+              "expected": 8,
+              "budget": 8,
+              "record_budget": 8,
+              "payload_bytes": 1152,
+              "ok": true
+            },
+            {
+              "edge": 2,
+              "expected": 10,
+              "budget": 10,
+              "record_budget": 10,
+              "payload_bytes": 1432,
+              "ok": true
+            }
+          ],
+          "sum_of_budgets": 24,
+          "note": "the sum is reported for reading only; it is not a budget of any single edge and must not be used as one"
+        }
+      },
+      {
+        "id": "2D-05",
+        "status": "PASS_CPU_SEMANTICS",
+        "detail": {
+          "per_edge": [
+            {
+              "edge": 0,
+              "ok": true,
+              "problems": []
+            },
+            {
+              "edge": 1,
+              "ok": true,
+              "problems": []
+            },
+            {
+              "edge": 2,
+              "ok": true,
+              "problems": []
+            }
+          ]
+        }
+      },
+      {
+        "id": "2D-06a",
+        "status": "PASS_CPU_SEMANTICS",
+        "detail": {
+          "logical_len": 96,
+          "position_range": [
+            0,
+            96
+          ],
+          "lost_fields": []
+        }
+      },
+      {
+        "id": "2D-06b",
+        "status": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+        "detail": {
+          "note": "position metadata travelling is necessary but not sufficient: the RoPE phase seen by appended tokens must be compared against a dense forward pass on a real checkpoint. Requires 2A GPU run."
+        }
+      },
+      {
+        "id": "2D-07",
+        "status": "PASS_CPU_SEMANTICS",
+        "detail": {
+          "problems": [],
+          "schema_version": "dcckv-experiment-record/1",
+          "stage": "2D",
+          "entries": 3,
+          "counted_for": [
+            "this edge only",
+            "this edge only",
+            "this edge only"
+          ],
+          "stage_verdict": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+          "partial": {
+            "sp": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+            "compact": "PASS_CPU_SEMANTICS",
+            "destination": "PASS_CPU_SEMANTICS"
+          }
+        }
+      },
+      {
+        "id": "2D-08",
+        "status": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+        "detail": {
+          "blocked_rows": [
+            "sp.rank_topology",
+            "sp.owner_kv_resident",
+            "sp.remote_staging",
+            "sp.no_full_copy",
+            "sp.communication"
+          ],
+          "sp_status": "MISSING",
+          "evidence_level": "structural_cpu",
+          "note": "no process, no NCCL, no all_to_all_v: the transfer side of 2D is not measured here"
+        }
+      }
+    ]
+  },
+  "edges": [
+    {
+      "schema": "dcckv-edge-record/1",
+      "definitions": {
+        "bind_tol": 1e-06,
+        "bind_rule": "a key is on a bound when |beta_j - bound| <= bind_tol, in beta units",
+        "dead_rel": 1e-06,
+        "dead_rule": "per retained key j: c_j = w_j * sum_i A_ij; c_j < DEAD_REL * sum_j c_j. The denominator is the sum over retained keys only, and A is the beta design matrix stacked over all n_ref calibration queries.",
+        "mass_residual_agg": "pooled_over_all_calibration_queries",
+        "mass_residual_rule": "||A w - m||_2 / ||m||_2 where A and m are stacked over ALL n_ref calibration queries and the norm is taken once over the stacked vector; it is NOT a mean of per-query ratios",
+        "beta_design": "A in R^(n_ref x t), A_ij = exp(q_i . C_k_j / sqrt(d)) after a per-row max shift; target m_i = sum over ALL source keys of exp(q_i . K / sqrt(d))",
+        "value_design": "X in R^(n_ref x t), X_ij = softmax_j(q_i . C_k_j / sqrt(d) + beta_j); target Y = dense attention output on the same queries",
+        "payload": "per edge: t*dk*dtype + t*dv*dtype (keys, values) + t*dtype (beta) + t*index_bytes (indices) + meta_bytes. No cross-edge total is defined."
+      },
+      "edge": {
+        "source": "source",
+        "destination": 0
+      },
+      "budget_tokens": 6,
+      "n_ref": 12,
+      "selector": "softmax_rms",
+      "beta_mode": "box",
+      "value_mode": "ols",
+      "query_hash_calibration": "bdb5578eb376daa46387c76ec123afc16bef11c01feacd904455c0e2d30f3a61",
+      "query_hash_heldout": "aba5dc4c15ed168042ea8f716e07c7db488454da7a1b08dedffbe2b69e510037",
+      "n_heldout": 6,
+      "selected_indices": [
+        3,
+        10,
+        38,
+        43,
+        89,
+        90
+      ],
+      "logical_len": 96,
+      "source_len": 96,
+      "position_range": [
+        0,
+        96
+      ],
+      "payload": {
+        "counted_for": "this edge only",
+        "t": 6,
+        "dk": 8,
+        "dv": 8,
+        "dtype_bytes": 8,
+        "keys_bytes": 384,
+        "values_bytes": 384,
+        "beta_bytes": 48,
+        "indices_bytes": 24,
+        "meta_bytes": 32,
+        "bytes": 872,
+        "bits_per_source_token": 72.66666666666667
+      },
+      "payload_digest": "da0560d40542be75344f3ae43bbec50a4109a1eb15406ac442466b3959515fab",
+      "diagnostics": {
+        "beta_bounds": {
+          "lo": -3.0,
+          "hi": 3.0,
+          "bind_tol": 1e-06,
+          "bind_hi_count": 0,
+          "bind_hi_frac": 0.0,
+          "bind_lo_count": 2,
+          "bind_lo_frac": 0.3333333333333333,
+          "beta_min": -3.0,
+          "beta_max": 2.8673121419052725,
+          "beta_mean": 0.8401169561058538
+        },
+        "beta_dead": {
+          "dead_rel": 1e-06,
+          "dead_count": 0,
+          "dead_frac": 0.0,
+          "denominator": 521.7892239426537,
+          "scope": "per retained key j: c_j = w_j * sum_i A_ij; c_j < DEAD_REL * sum_j c_j. The denominator is the sum over retained keys only, and A is the beta design matrix stacked over all n_ref calibration queries."
+        },
+        "mass_residual": {
+          "aggregation": "pooled_over_all_calibration_queries",
+          "normalized": 0.23996369189279532,
+          "raw": 37.366381621746775,
+          "denominator": 155.7168141855408,
+          "n_ref": 12
+        },
+        "beta_design": {
+          "problem": "beta_box_ls",
+          "method": "householder_qr_f64_cpu",
+          "n": 12,
+          "p": 6,
+          "rank": 6,
+          "cond": 121.14156006310981,
+          "sigma_min": 0.021392841726251555,
+          "sigma_max": 2.5915622209013045,
+          "tol": 6.905308913744003e-15,
+          "rank_deficient": false
+        },
+        "value_design": {
+          "problem": "value_ols",
+          "method": "householder_qr_f64_cpu",
+          "n": 12,
+          "p": 6,
+          "rank": 6,
+          "cond": 43481.50972111544,
+          "sigma_min": 2.3588421392108214e-05,
+          "sigma_max": 1.0256601740667208,
+          "tol": 2.7329076976558064e-15,
+          "rank_deficient": false
+        }
+      },
+      "solver": {
+        "method": "householder_qr_f64_cpu",
+        "status": "ok",
+        "value_status": "ok",
+        "fallback_used": false,
+        "dtype_bytes": 8,
+        "policy": {
+          "fallback": "",
+          "on_failure": "raise_and_record",
+          "solve_separate_from_diagnose": true,
+          "note": "CUDA torch.linalg.lstsq only supports driver='gels', which assumes full rank and does not return a usable rank. A GPU run must obtain rank/cond from a separate diagnostic pass and record both. A failed solve is recorded as failed; switching to ridge/pinv is forbidden."
+        }
+      },
+      "beta": [
+        2.8347080951070045,
+        2.8673121419052725,
+        2.7506003848968623,
+        -3.0,
+        2.5880811147259837,
+        -3.0
+      ],
+      "values": [
+        [
+          -0.01198173285084239,
+          0.14968823874423062,
+          -0.0020784768618522347,
+          0.014618685578277732,
+          0.16676900046238344,
+          -0.13782010942331022,
+          -0.05775282508769992,
+          0.009248734493761896
+        ],
+        [
+          3.532426882876766,
+          -5.409865805596554,
+          -0.14810188516750236,
+          -0.8374556472596785,
+          -0.03649898577902759,
+          -1.6875672906466388,
+          -1.2279002027748975,
+          1.5218955927935944
+        ],
+        [
+          0.4608256490411845,
+          -0.3469505521568345,
+          -0.35244360285457166,
+          -0.2630466208768732,
+          0.1365286882082609,
+          0.14771742856670478,
+          0.061393626817478966,
+          0.12273058570580947
+        ],
+        [
+          -1062.474305863618,
+          1565.631159878951,
+          -109.34892136850434,
+          425.4143820551782,
+          382.56132956113015,
+          270.42421416038775,
+          151.42922933995322,
+          -708.7104575035446
+        ],
+        [
+          0.19309393531391444,
+          -0.6298427371791134,
+          0.21470105119282612,
+          -0.03686253331444298,
+          0.05788559989686356,
+          0.12680889368477385,
+          0.003989113686169168,
+          0.6920969258057376
+        ],
+        [
+          -358.29146610686064,
+          658.1499965673587,
+          33.984557092545586,
+          22.21471070656093,
+          -123.8152767338869,
+          291.3388066148237,
+          281.2809034542012,
+          -66.78345185680743
+        ]
+      ]
+    },
+    {
+      "schema": "dcckv-edge-record/1",
+      "definitions": {
+        "bind_tol": 1e-06,
+        "bind_rule": "a key is on a bound when |beta_j - bound| <= bind_tol, in beta units",
+        "dead_rel": 1e-06,
+        "dead_rule": "per retained key j: c_j = w_j * sum_i A_ij; c_j < DEAD_REL * sum_j c_j. The denominator is the sum over retained keys only, and A is the beta design matrix stacked over all n_ref calibration queries.",
+        "mass_residual_agg": "pooled_over_all_calibration_queries",
+        "mass_residual_rule": "||A w - m||_2 / ||m||_2 where A and m are stacked over ALL n_ref calibration queries and the norm is taken once over the stacked vector; it is NOT a mean of per-query ratios",
+        "beta_design": "A in R^(n_ref x t), A_ij = exp(q_i . C_k_j / sqrt(d)) after a per-row max shift; target m_i = sum over ALL source keys of exp(q_i . K / sqrt(d))",
+        "value_design": "X in R^(n_ref x t), X_ij = softmax_j(q_i . C_k_j / sqrt(d) + beta_j); target Y = dense attention output on the same queries",
+        "payload": "per edge: t*dk*dtype + t*dv*dtype (keys, values) + t*dtype (beta) + t*index_bytes (indices) + meta_bytes. No cross-edge total is defined."
+      },
+      "edge": {
+        "source": "source",
+        "destination": 1
+      },
+      "budget_tokens": 8,
+      "n_ref": 16,
+      "selector": "softmax_rms",
+      "beta_mode": "box",
+      "value_mode": "ols",
+      "query_hash_calibration": "e5260b06ef99f0c73e578bac7248a4b31f41362b42b1951272bd33c82e3c2812",
+      "query_hash_heldout": "a54bdf5556187b611e06b7cc3606eb00488d27e43792418b4f4c13ef793619dd",
+      "n_heldout": 6,
+      "selected_indices": [
+        5,
+        12,
+        15,
+        25,
+        72,
+        73,
+        77,
+        82
+      ],
+      "logical_len": 96,
+      "source_len": 96,
+      "position_range": [
+        0,
+        96
+      ],
+      "payload": {
+        "counted_for": "this edge only",
+        "t": 8,
+        "dk": 8,
+        "dv": 8,
+        "dtype_bytes": 8,
+        "keys_bytes": 512,
+        "values_bytes": 512,
+        "beta_bytes": 64,
+        "indices_bytes": 32,
+        "meta_bytes": 32,
+        "bytes": 1152,
+        "bits_per_source_token": 96.0
+      },
+      "payload_digest": "575966328f39723ff3b28502d4246baa967e3cf8f70a601afa6a01dbc99ab109",
+      "diagnostics": {
+        "beta_bounds": {
+          "lo": -3.0,
+          "hi": 3.0,
+          "bind_tol": 1e-06,
+          "bind_hi_count": 2,
+          "bind_hi_frac": 0.25,
+          "bind_lo_count": 1,
+          "bind_lo_frac": 0.125,
+          "beta_min": -3.0,
+          "beta_max": 3.0,
+          "beta_mean": 1.1496910766374675
+        },
+        "beta_dead": {
+          "dead_rel": 1e-06,
+          "dead_count": 0,
+          "dead_frac": 0.0,
+          "denominator": 737.4319479871683,
+          "scope": "per retained key j: c_j = w_j * sum_i A_ij; c_j < DEAD_REL * sum_j c_j. The denominator is the sum over retained keys only, and A is the beta design matrix stacked over all n_ref calibration queries."
+        },
+        "mass_residual": {
+          "aggregation": "pooled_over_all_calibration_queries",
+          "normalized": 0.20624485060971787,
+          "raw": 42.060896732242945,
+          "denominator": 203.93671215499,
+          "n_ref": 16
+        },
+        "beta_design": {
+          "problem": "beta_box_ls",
+          "method": "householder_qr_f64_cpu",
+          "n": 16,
+          "p": 8,
+          "rank": 8,
+          "cond": 128.94391538111358,
+          "sigma_min": 0.01887444431010016,
+          "sigma_max": 2.433744749987096,
+          "tol": 8.646398263988061e-15,
+          "rank_deficient": false
+        },
+        "value_design": {
+          "problem": "value_ols",
+          "method": "householder_qr_f64_cpu",
+          "n": 16,
+          "p": 8,
+          "rank": 8,
+          "cond": 3876.3176619967753,
+          "sigma_min": 0.00030203816884926993,
+          "sigma_max": 1.1707958885075893,
+          "tol": 4.159502568184299e-15,
+          "rank_deficient": false
+        }
+      },
+      "solver": {
+        "method": "householder_qr_f64_cpu",
+        "status": "ok",
+        "value_status": "ok",
+        "fallback_used": false,
+        "dtype_bytes": 8,
+        "policy": {
+          "fallback": "",
+          "on_failure": "raise_and_record",
+          "solve_separate_from_diagnose": true,
+          "note": "CUDA torch.linalg.lstsq only supports driver='gels', which assumes full rank and does not return a usable rank. A GPU run must obtain rank/cond from a separate diagnostic pass and record both. A failed solve is recorded as failed; switching to ridge/pinv is forbidden."
+        }
+      },
+      "beta": [
+        3.0,
+        -1.4724817117524285,
+        2.318265021412512,
+        2.7966663273174652,
+        -0.3968162046843317,
+        -3.0,
+        2.951895180806523,
+        3.0
+      ],
+      "values": [
+        [
+          -0.4664534028214943,
+          0.5224557486829224,
+          -1.94445565526065,
+          2.076495241995412,
+          0.44441880568463665,
+          0.945739038583057,
+          0.9162927753236653,
+          -1.7049180343310424
+        ],
+        [
+          48.679400786516595,
+          -58.498664607388385,
+          127.74559793643014,
+          -168.88665270973215,
+          -10.77622110299816,
+          -89.83864858583217,
+          -80.79479072206277,
+          152.4001892973748
+        ],
+        [
+          -1.6008660416001028,
+          3.098206476497779,
+          0.23245851554136873,
+          0.029486777734068274,
+          1.9940564806699623,
+          -0.659089347645185,
+          1.7058121767903376,
+          -1.2153614532494956
+        ],
+        [
+          0.18427405937206567,
+          0.09280862996394924,
+          -0.3344207437900908,
+          -0.06467263300849943,
+          0.15959104318936587,
+          0.02773693049855078,
+          -0.032741579410643394,
+          0.034584888225316746
+        ],
+        [
+          -0.436784180188822,
+          -3.532710710261529,
+          12.10213515188148,
+          -8.973004538052543,
+          -0.6244825849918221,
+          -5.112506547977516,
+          -1.9365513552644333,
+          9.326718892240411
+        ],
+        [
+          551.0100701555899,
+          -215.6953395096094,
+          -327.51591459315506,
+          -453.33971724929404,
+          -607.2063374153702,
+          -195.16359805667005,
+          -449.9690826574503,
+          333.7400766872333
+        ],
+        [
+          -0.7851254776737119,
+          -0.17926367458100773,
+          0.033968144793180007,
+          1.036371659485477,
+          0.9987703952511704,
+          0.471539924140988,
+          0.38384961448519056,
+          -0.7265452212381338
+        ],
+        [
+          0.04983185823660993,
+          -0.36498421289274463,
+          0.3523742906395562,
+          0.5370791798253164,
+          0.33321759959185493,
+          0.6130854619390033,
+          -0.014847034309525088,
+          0.043023491257753094
+        ]
+      ]
+    },
+    {
+      "schema": "dcckv-edge-record/1",
+      "definitions": {
+        "bind_tol": 1e-06,
+        "bind_rule": "a key is on a bound when |beta_j - bound| <= bind_tol, in beta units",
+        "dead_rel": 1e-06,
+        "dead_rule": "per retained key j: c_j = w_j * sum_i A_ij; c_j < DEAD_REL * sum_j c_j. The denominator is the sum over retained keys only, and A is the beta design matrix stacked over all n_ref calibration queries.",
+        "mass_residual_agg": "pooled_over_all_calibration_queries",
+        "mass_residual_rule": "||A w - m||_2 / ||m||_2 where A and m are stacked over ALL n_ref calibration queries and the norm is taken once over the stacked vector; it is NOT a mean of per-query ratios",
+        "beta_design": "A in R^(n_ref x t), A_ij = exp(q_i . C_k_j / sqrt(d)) after a per-row max shift; target m_i = sum over ALL source keys of exp(q_i . K / sqrt(d))",
+        "value_design": "X in R^(n_ref x t), X_ij = softmax_j(q_i . C_k_j / sqrt(d) + beta_j); target Y = dense attention output on the same queries",
+        "payload": "per edge: t*dk*dtype + t*dv*dtype (keys, values) + t*dtype (beta) + t*index_bytes (indices) + meta_bytes. No cross-edge total is defined."
+      },
+      "edge": {
+        "source": "source",
+        "destination": 2
+      },
+      "budget_tokens": 10,
+      "n_ref": 20,
+      "selector": "softmax_rms",
+      "beta_mode": "box",
+      "value_mode": "ols",
+      "query_hash_calibration": "6fc7a24086b6ac433ca156c84f8d4d364d1314dd5fe38d9133d835f499c2ea4d",
+      "query_hash_heldout": "57a7437dcef6e837c6b8766b8b07924749319599192c150f73470dbdcc016f37",
+      "n_heldout": 6,
+      "selected_indices": [
+        5,
+        14,
+        19,
+        23,
+        34,
+        38,
+        46,
+        62,
+        78,
+        92
+      ],
+      "logical_len": 96,
+      "source_len": 96,
+      "position_range": [
+        0,
+        96
+      ],
+      "payload": {
+        "counted_for": "this edge only",
+        "t": 10,
+        "dk": 8,
+        "dv": 8,
+        "dtype_bytes": 8,
+        "keys_bytes": 640,
+        "values_bytes": 640,
+        "beta_bytes": 80,
+        "indices_bytes": 40,
+        "meta_bytes": 32,
+        "bytes": 1432,
+        "bits_per_source_token": 119.33333333333333
+      },
+      "payload_digest": "db8d3d5c4c8970b7b0e34f4bb05f7e19fe60558be9f70302f12607615c1e456c",
+      "diagnostics": {
+        "beta_bounds": {
+          "lo": -3.0,
+          "hi": 3.0,
+          "bind_tol": 1e-06,
+          "bind_hi_count": 0,
+          "bind_hi_frac": 0.0,
+          "bind_lo_count": 4,
+          "bind_lo_frac": 0.4,
+          "beta_min": -3.0,
+          "beta_max": 2.773345170503314,
+          "beta_mean": 0.3545568846671328
+        },
+        "beta_dead": {
+          "dead_rel": 1e-06,
+          "dead_count": 0,
+          "dead_frac": 0.0,
+          "denominator": 755.8057841948067,
+          "scope": "per retained key j: c_j = w_j * sum_i A_ij; c_j < DEAD_REL * sum_j c_j. The denominator is the sum over retained keys only, and A is the beta design matrix stacked over all n_ref calibration queries."
+        },
+        "mass_residual": {
+          "aggregation": "pooled_over_all_calibration_queries",
+          "normalized": 0.22761734941576325,
+          "raw": 39.725769505924866,
+          "denominator": 174.52874136304183,
+          "n_ref": 20
+        },
+        "beta_design": {
+          "problem": "beta_box_ls",
+          "method": "householder_qr_f64_cpu",
+          "n": 20,
+          "p": 10,
+          "rank": 10,
+          "cond": 1437.1939168653432,
+          "sigma_min": 0.0022145555989248455,
+          "sigma_max": 3.1827458353348748,
+          "tol": 1.413423083167442e-14,
+          "rank_deficient": false
+        },
+        "value_design": {
+          "problem": "value_ols",
+          "method": "householder_qr_f64_cpu",
+          "n": 20,
+          "p": 10,
+          "rank": 10,
+          "cond": 9547.31345613521,
+          "sigma_min": 4.7373067725005835e-05,
+          "sigma_max": 0.45228552694935287,
+          "tol": 2.008551222895573e-15,
+          "rank_deficient": false
+        }
+      },
+      "solver": {
+        "method": "householder_qr_f64_cpu",
+        "status": "ok",
+        "value_status": "ok",
+        "fallback_used": false,
+        "dtype_bytes": 8,
+        "policy": {
+          "fallback": "",
+          "on_failure": "raise_and_record",
+          "solve_separate_from_diagnose": true,
+          "note": "CUDA torch.linalg.lstsq only supports driver='gels', which assumes full rank and does not return a usable rank. A GPU run must obtain rank/cond from a separate diagnostic pass and record both. A failed solve is recorded as failed; switching to ridge/pinv is forbidden."
+        }
+      },
+      "beta": [
+        -3.0,
+        2.704009452204201,
+        2.748656243267568,
+        -3.0,
+        2.689333756671948,
+        -3.0,
+        2.011115957408027,
+        -3.0,
+        2.773345170503314,
+        2.61910826661627
+      ],
+      "values": [
+        [
+          6.92777854222123,
+          -30.09189498047612,
+          83.44232198211019,
+          0.5190867440548459,
+          4.914227511844612,
+          26.88379976987661,
+          -55.97179559775803,
+          110.79840657179378
+        ],
+        [
+          -1.7210900916664262,
+          2.842761367967266,
+          4.267441565137632,
+          1.456948506349644,
+          6.046500198153582,
+          -1.1896848114159615,
+          2.6415358859175653,
+          0.48019739691389074
+        ],
+        [
+          -1.928041095536411,
+          -3.442948721706885,
+          -1.005436837846041,
+          -2.119859950607768,
+          1.655914035092627,
+          0.8788325564449074,
+          4.826379015749485,
+          -5.387159652954744
+        ],
+        [
+          24.767925244138766,
+          249.07605669877557,
+          128.27757647319655,
+          74.29729365632407,
+          88.56353175912064,
+          -26.42137144915674,
+          -126.55539410156831,
+          127.08143822325802
+        ],
+        [
+          0.8700717305917721,
+          2.4570165600481655,
+          0.7785171624825826,
+          1.7018285906607897,
+          1.301678418160087,
+          -0.8632050834409992,
+          -0.5704447136148514,
+          1.9409821807746488
+        ],
+        [
+          461.8288942486738,
+          494.6775625507246,
+          -23.16080675890056,
+          369.0169876051178,
+          -611.9432428480336,
+          -116.72076647591638,
+          -1165.383058859989,
+          1187.5177465906343
+        ],
+        [
+          -0.12197016881148887,
+          -0.040914081569870385,
+          -0.2045409817236465,
+          -0.06054658328371267,
+          0.30258389012685105,
+          -0.08602888921158063,
+          0.24377606424716242,
+          -0.04783680332769094
+        ],
+        [
+          781.7061165279492,
+          -3175.9305227905475,
+          -4832.33777098565,
+          -2861.7745251436218,
+          -6335.105589512956,
+          1353.5360828613154,
+          -3720.921589998826,
+          -1260.380833362071
+        ],
+        [
+          -0.04055037779129664,
+          -0.006032286588448066,
+          -0.536674430035631,
+          -0.04610845254100254,
+          0.22412310138478356,
+          -0.20275113172925627,
+          0.24489815039160356,
+          -0.5445287633469762
+        ],
+        [
+          -1.2518183155439473,
+          7.572351794477774,
+          12.313669250515991,
+          8.15340881753354,
+          16.2578615646852,
+          -2.9580932550647585,
+          10.20186011127125,
+          3.514364657061516
+        ]
+      ]
+    }
+  ],
+  "records": {
+    "2A": {
+      "schema_version": "dcckv-experiment-record/1",
+      "experiment_id": "2a-cpu-closure-v1",
+      "stage": "2A",
+      "scope": {
+        "evidence_level": "structural_cpu",
+        "claims": [
+          "dense_sp_sharding",
+          "owner_kv_residency",
+          "remote_staging_layout",
+          "no_full_kv_copy",
+          "merge_numerics_cpu"
+        ],
+        "does_not_claim": [
+          "nccl_transport",
+          "all_to_all_v_bandwidth",
+          "wall_clock_speedup",
+          "compression_quality",
+          "real_model_numerics"
+        ]
+      },
+      "provenance": {
+        "vcs": "no_git_repository",
+        "commit": null,
+        "files": [
+          {
+            "path": "sp_attention.py",
+            "sha256": "451d2f2e7a0089ee9a0bb44ccfa75b15b74e86b1850b60e328daeea7f9db53db"
+          },
+          {
+            "path": "state.py",
+            "sha256": "e733b8cfb50deb67e13fc28fb207cf3bb98fafcf40c6188f7ad7eedeaea95642"
+          },
+          {
+            "path": "accept.py",
+            "sha256": "8a6d1ace3edec05ebcfdb3c80cc5ff4c114186ef6cff4e55f47661d76000e05a"
+          },
+          {
+            "path": "adapter_2a.py",
+            "sha256": "ac5f9cf9cb99d6ba9440a4a5878d82e97c65b89a0dfaebccfcdd6814a91e4532"
+          },
+          {
+            "path": "envelope.py",
+            "sha256": "d785977eb26dd20712b3f1811848e5bff62a393552b5bc965fa3acf94a5dd77a"
+          },
+          {
+            "path": "q8.py",
+            "sha256": "d985756bfde9577489e121ac259c580c731342b6ef219f080bf422c9e1dee931"
+          }
+        ],
+        "config_sha": "3e79dca73b5650864a1da5b89d77f5762f5e840a2f46e68044e5a964410e3e37",
+        "environment": {
+          "backend": "cpu_ref_f64",
+          "python": "3.13.14",
+          "platform": "Windows-11-10.0.26200-SP0",
+          "machine": "AMD64"
+        },
+        "generator": "src/v2/cpu_ref/adapter_2a.py",
+        "generated_at": null
+      },
+      "topology": {
+        "world_size": 4,
+        "ranks": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "source": null,
+        "destinations": [],
+        "rank_map": {
+          "0": [
+            0,
+            24
+          ],
+          "1": [
+            24,
+            48
+          ],
+          "2": [
+            48,
+            72
+          ],
+          "3": [
+            72,
+            96
+          ]
+        },
+        "layout": "contiguous_equal_split"
+      },
+      "workload": {
+        "model": {
+          "synthetic": true,
+          "name": "synthetic_gaussian",
+          "revision": null,
+          "note": "structure only, no checkpoint"
+        },
+        "seq_len": 96,
+        "position_ids": {
+          "start": 0,
+          "end": 96,
+          "logical_len": 96,
+          "rope_phase_verified": false,
+          "note": "no RoPE is applied in the reference"
+        },
+        "dtype": "float64"
+      },
+      "sp_structure": {
+        "status": "APPLICABLE",
+        "reason": null,
+        "rank_topology": {
+          "status": "APPLICABLE",
+          "world_size": 4,
+          "L": 96,
+          "per_rank": [
+            {
+              "rank": 0,
+              "own_span": [
+                0,
+                24
+              ],
+              "own_len": 24,
+              "source_blocks": [
+                [
+                  0,
+                  24
+                ]
+              ]
+            },
+            {
+              "rank": 1,
+              "own_span": [
+                24,
+                48
+              ],
+              "own_len": 24,
+              "source_blocks": [
+                [
+                  0,
+                  24
+                ],
+                [
+                  24,
+                  48
+                ]
+              ]
+            },
+            {
+              "rank": 2,
+              "own_span": [
+                48,
+                72
+              ],
+              "own_len": 24,
+              "source_blocks": [
+                [
+                  0,
+                  24
+                ],
+                [
+                  24,
+                  48
+                ],
+                [
+                  48,
+                  72
+                ]
+              ]
+            },
+            {
+              "rank": 3,
+              "own_span": [
+                72,
+                96
+              ],
+              "own_len": 24,
+              "source_blocks": [
+                [
+                  0,
+                  24
+                ],
+                [
+                  24,
+                  48
+                ],
+                [
+                  48,
+                  72
+                ],
+                [
+                  72,
+                  96
+                ]
+              ]
+            }
+          ]
+        },
+        "owner_kv": {
+          "status": "APPLICABLE",
+          "counted_for": "dense KV resident on this rank",
+          "full_kv_bytes": 12288,
+          "per_rank": [
+            {
+              "rank": 0,
+              "own_len": 24,
+              "resident_kv_numel": 384,
+              "resident_kv_bytes": 3072,
+              "ratio_of_full": 0.25,
+              "dtype_bytes": 8
+            },
+            {
+              "rank": 1,
+              "own_len": 24,
+              "resident_kv_numel": 384,
+              "resident_kv_bytes": 3072,
+              "ratio_of_full": 0.25,
+              "dtype_bytes": 8
+            },
+            {
+              "rank": 2,
+              "own_len": 24,
+              "resident_kv_numel": 384,
+              "resident_kv_bytes": 3072,
+              "ratio_of_full": 0.25,
+              "dtype_bytes": 8
+            },
+            {
+              "rank": 3,
+              "own_len": 24,
+              "resident_kv_numel": 384,
+              "resident_kv_bytes": 3072,
+              "ratio_of_full": 0.25,
+              "dtype_bytes": 8
+            }
+          ],
+          "source": "layout_derived"
+        },
+        "remote_staging": {
+          "status": "APPLICABLE",
+          "counted_for": "remote KV staged transiently on this rank",
+          "per_rank": [
+            {
+              "rank": 0,
+              "remote_block_count": 0,
+              "staged_kv_numel": 0,
+              "staged_kv_bytes": 0
+            },
+            {
+              "rank": 1,
+              "remote_block_count": 1,
+              "staged_kv_numel": 384,
+              "staged_kv_bytes": 3072
+            },
+            {
+              "rank": 2,
+              "remote_block_count": 2,
+              "staged_kv_numel": 768,
+              "staged_kv_bytes": 6144
+            },
+            {
+              "rank": 3,
+              "remote_block_count": 3,
+              "staged_kv_numel": 1152,
+              "staged_kv_bytes": 9216
+            }
+          ],
+          "note": "staging is transient and is never summed with resident bytes"
+        },
+        "no_full_copy": {
+          "status": "APPLICABLE",
+          "full_kv_bytes": 12288,
+          "ranks_holding_full_copy": [],
+          "negative_arm": "sp_forward(all_gather=True) is built and must be rejected"
+        },
+        "communication": {
+          "status": "APPLICABLE",
+          "evidence": "declared_structural",
+          "rounds": null,
+          "bytes_per_round": null,
+          "backend": "none_cpu_in_process",
+          "note": "no process, no NCCL, no all_to_all_v: block counts and byte counts are derived from the partition layout"
+        },
+        "gqa_repeat": {
+          "status": "NOT_APPLICABLE",
+          "reason": "the CPU reference is single-head; GQA is not exercised"
+        },
+        "numerical": {
+          "status": "APPLICABLE",
+          "rel_l2": 2.414458946367205e-16,
+          "max_abs": 5.551115123125783e-16,
+          "cosine": 1.0,
+          "tolerance": 1e-09,
+          "tolerance_source": "test_value",
+          "tolerance_policy": {
+            "q8": "Q8",
+            "metric": "relative_l2",
+            "threshold": 1e-09,
+            "direction": "<=",
+            "source": "test_value",
+            "post_hoc_adjustment": "forbidden",
+            "frozen_on": null
+          },
+          "non_finite": {
+            "sp": 0,
+            "ref": 0
+          },
+          "shape": {
+            "sp": [
+              96,
+              8
+            ],
+            "ref": [
+              96,
+              8
+            ]
+          },
+          "logit_agreement": null,
+          "merge_order_tested": "forward",
+          "boundary_coverage": {
+            "status": "PASS",
+            "required": [
+              23,
+              24,
+              25,
+              47,
+              48,
+              49,
+              71,
+              72,
+              73,
+              95
+            ],
+            "sampled": [
+              23,
+              24,
+              25,
+              47,
+              48,
+              49,
+              71,
+              72,
+              73,
+              95
+            ],
+            "missing": [],
+            "missing_reference": [],
+            "per_position": [
+              {
+                "position": 23,
+                "rel_l2": 0.0,
+                "max_abs": 0.0,
+                "finite_sp": true,
+                "finite_ref": true
+              },
+              {
+                "position": 24,
+                "rel_l2": 0.0,
+                "max_abs": 0.0,
+                "finite_sp": true,
+                "finite_ref": true
+              },
+              {
+                "position": 25,
+                "rel_l2": 8.797587800224918e-17,
+                "max_abs": 5.551115123125783e-17,
+                "finite_sp": true,
+                "finite_ref": true
+              },
+              {
+                "position": 47,
+                "rel_l2": 5.850743980736731e-16,
+                "max_abs": 2.498001805406602e-16,
+                "finite_sp": true,
+                "finite_ref": true
+              },
+              {
+                "position": 48,
+                "rel_l2": 4.19455786374897e-16,
+                "max_abs": 1.1102230246251565e-16,
+                "finite_sp": true,
+                "finite_ref": true
+              },
+              {
+                "position": 49,
+                "rel_l2": 4.240331133486478e-16,
+                "max_abs": 1.3877787807814457e-16,
+                "finite_sp": true,
+                "finite_ref": true
+              },
+              {
+                "position": 71,
+                "rel_l2": 4.354270512319077e-16,
+                "max_abs": 2.7755575615628914e-16,
+                "finite_sp": true,
+                "finite_ref": true
+              },
+              {
+                "position": 72,
+                "rel_l2": 2.1103691730371522e-16,
+                "max_abs": 5.551115123125783e-17,
+                "finite_sp": true,
+                "finite_ref": true
+              },
+              {
+                "position": 73,
+                "rel_l2": 2.351743098881172e-16,
+                "max_abs": 1.1102230246251565e-16,
+                "finite_sp": true,
+                "finite_ref": true
+              },
+              {
+                "position": 95,
+                "rel_l2": 8.957009349478003e-16,
+                "max_abs": 1.6653345369377348e-16,
+                "finite_sp": true,
+                "finite_ref": true
+              }
+            ],
+            "above_threshold": [],
+            "not_gating": [
+              "per-position rel_l2 magnitude"
+            ]
+          },
+          "reference_identity": {
+            "status": "PASS",
+            "path": null,
+            "sha256": "566b3a73437fa2ff24af355b864b1fe93c62b6677e88c4276a951cbb818f9cd2",
+            "expected_sha256": null
+          },
+          "note": null
+        }
+      },
+      "compact_diagnostics": {
+        "status": "NOT_APPLICABLE",
+        "reason": "2A shards a dense KV cache; it never selects keys, fits beta or solves for values, so there is no compression diagnostic to report"
+      },
+      "upstream_refs": [],
+      "verdict": {
+        "overall": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+        "ceiling": "PASS_CPU_SEMANTICS",
+        "evidence_level": "structural_cpu",
+        "partial": {
+          "sp": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+          "compact": "NOT_APPLICABLE",
+          "destination": "NOT_APPLICABLE"
+        },
+        "blocked_requires_gpu": [
+          "sp.backend",
+          "sp.communication"
+        ],
+        "failed": [],
+        "checks": [
+          {
+            "id": "sp.rank_topology",
+            "group": "sp",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "n_ranks": 4,
+              "world_size": 4
+            },
+            "source_check": "2A-01"
+          },
+          {
+            "id": "sp.owner_kv_resident",
+            "group": "sp",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "full_kv_bytes": 12288,
+              "ratios": [
+                0.25,
+                0.25,
+                0.25,
+                0.25
+              ]
+            },
+            "source_check": "2A-01"
+          },
+          {
+            "id": "sp.remote_staging",
+            "group": "sp",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "remote_block_counts": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "source_check": "2A-03"
+          },
+          {
+            "id": "sp.no_full_copy",
+            "group": "sp",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "ranks_holding_full_copy": []
+            },
+            "source_check": "2A-02"
+          },
+          {
+            "id": "sp.numerical",
+            "group": "sp",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "rel_l2": 2.414458946367205e-16,
+              "tolerance": 1e-09,
+              "tolerance_source": "test_value",
+              "rel_l2_gate": true,
+              "max_abs_gate": false,
+              "cosine_gate": false
+            },
+            "source_check": "2A-04"
+          },
+          {
+            "id": "sp.numerical_coverage",
+            "group": "sp",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "required": [
+                23,
+                24,
+                25,
+                47,
+                48,
+                49,
+                71,
+                72,
+                73,
+                95
+              ],
+              "missing": [],
+              "above_threshold": []
+            },
+            "source_check": "2A-04b"
+          },
+          {
+            "id": "sp.reference_identity",
+            "group": "sp",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "sha256": "566b3a73437fa2ff24af355b864b1fe93c62b6677e88c4276a951cbb818f9cd2",
+              "expected_sha256": null
+            },
+            "source_check": "2A-04c"
+          },
+          {
+            "id": "sp.backend",
+            "group": "sp",
+            "status": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+            "detail": {
+              "note": "CPU reference cannot satisfy backend consistency; a real device run is required",
+              "backend": "cpu_ref_f64"
+            },
+            "source_check": "2A-05"
+          },
+          {
+            "id": "sp.communication",
+            "group": "sp",
+            "status": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+            "detail": {
+              "evidence": "declared_structural",
+              "rounds": null,
+              "bytes_per_round": null,
+              "note": "no process, no NCCL, no all_to_all_v: block counts and byte counts are derived from the partition layout"
+            }
+          }
+        ]
+      },
+      "notes": [
+        "dense SP reference over the same tensors as 2D",
+        "tolerance is a CPU test value; Q8 is frozen at 1e-5 for hardware runs and this record does not cite it"
+      ]
+    },
+    "2D": {
+      "schema_version": "dcckv-experiment-record/1",
+      "experiment_id": "2d-cpu-closure-v1",
+      "stage": "2D",
+      "scope": {
+        "evidence_level": "structural_cpu",
+        "claims": [
+          "destination_conditioned_construction",
+          "per_edge_budget",
+          "heldout_isolation",
+          "position_metadata_preserved"
+        ],
+        "does_not_claim": [
+          "nccl_transport",
+          "all_to_all_v_bandwidth",
+          "distance_decay_of_gain",
+          "wall_clock_speedup",
+          "compression_quality_benefit"
+        ]
+      },
+      "provenance": {
+        "vcs": "no_git_repository",
+        "commit": null,
+        "files": [
+          {
+            "path": "compact.py",
+            "sha256": "70df72e0fbc28597c445f97bad5b26bf2de1e88a2e57b69d0630130bff259a7d"
+          },
+          {
+            "path": "record.py",
+            "sha256": "3c0e1d339bb80e8c2fd5db1a9005ffbfdebae9e5d5bb5eb6719c0219d657ffac"
+          },
+          {
+            "path": "two_d.py",
+            "sha256": "50f817affb58255dd0216bdedb60bc12946d4249e1726181d728a67f92e0873e"
+          },
+          {
+            "path": "adapter_compact.py",
+            "sha256": "2cd0d2748327525321931b9d8e0535aa826f685928905dc676519170f10a55e7"
+          },
+          {
+            "path": "envelope.py",
+            "sha256": "d785977eb26dd20712b3f1811848e5bff62a393552b5bc965fa3acf94a5dd77a"
+          }
+        ],
+        "config_sha": "588d21add4f3bcd90d0cbc05d58b1c4832d94937073dad0525c87ccd875d0262",
+        "environment": {
+          "backend": "cpu_ref_f64",
+          "python": "3.13.14",
+          "dtype_bytes": 8,
+          "diagnostic_method": "householder_qr_f64_cpu",
+          "solver_method": "householder_qr_f64_cpu"
+        },
+        "generator": "src/v2/cpu_ref/adapter_compact.py",
+        "generated_at": null
+      },
+      "topology": {
+        "world_size": null,
+        "ranks": [],
+        "source": "source",
+        "destinations": [
+          0,
+          1,
+          2
+        ],
+        "rank_map": {},
+        "layout": "one_source_n_destinations_no_transport"
+      },
+      "workload": {
+        "model": {
+          "synthetic": true,
+          "name": "synthetic_gaussian",
+          "revision": null,
+          "note": "construction semantics only"
+        },
+        "seq_len": 96,
+        "position_ids": {
+          "start": 0,
+          "end": 96,
+          "logical_len": 96,
+          "rope_phase_verified": false
+        },
+        "dtype": "float64"
+      },
+      "sp_structure": {
+        "status": "MISSING",
+        "reason": "this stage runs on SP, but this CPU run has no process, no ranks and no transport; the SP record is a gap in evidence, not an inapplicable quantity"
+      },
+      "compact_diagnostics": {
+        "status": "APPLICABLE",
+        "per_edge": true,
+        "entries": [
+          {
+            "label": "edge-0",
+            "edge": {
+              "source": "source",
+              "destination": 0
+            },
+            "budget_tokens": 6,
+            "inner_schema": "dcckv-edge-record/1",
+            "payload_digest": "da0560d40542be75344f3ae43bbec50a4109a1eb15406ac442466b3959515fab",
+            "key_selection": {
+              "status": "APPLICABLE",
+              "selector": "softmax_rms",
+              "beta_mode": "box",
+              "value_mode": "ols",
+              "budget_tokens": 6,
+              "n_ref": 12,
+              "query_hash": "bdb5578eb376daa46387c76ec123afc16bef11c01feacd904455c0e2d30f3a61",
+              "indices": "c4b2c6942ffd7f5306c9bc8519437adb11048fd3fe64c4cdc641d435959b22e7",
+              "n_indices": 6,
+              "heldout": {
+                "n": 6,
+                "query_hash": "aba5dc4c15ed168042ea8f716e07c7db488454da7a1b08dedffbe2b69e510037"
+              }
+            },
+            "beta_design": {
+              "status": "APPLICABLE",
+              "problem": "beta_box_ls",
+              "method": "householder_qr_f64_cpu",
+              "n": 12,
+              "p": 6,
+              "rank": 6,
+              "cond": 121.14156006310981,
+              "sigma_min": 0.021392841726251555,
+              "sigma_max": 2.5915622209013045,
+              "tol": 6.905308913744003e-15,
+              "rank_deficient": false
+            },
+            "value_design": {
+              "status": "APPLICABLE",
+              "problem": "value_ols",
+              "method": "householder_qr_f64_cpu",
+              "n": 12,
+              "p": 6,
+              "rank": 6,
+              "cond": 43481.50972111544,
+              "sigma_min": 2.3588421392108214e-05,
+              "sigma_max": 1.0256601740667208,
+              "tol": 2.7329076976558064e-15,
+              "rank_deficient": false
+            },
+            "beta_binding": {
+              "status": "APPLICABLE",
+              "lo": -3.0,
+              "hi": 3.0,
+              "bind_tol": 1e-06,
+              "bind_hi_count": 0,
+              "bind_hi_frac": 0.0,
+              "bind_lo_count": 2,
+              "bind_lo_frac": 0.3333333333333333,
+              "beta_min": -3.0,
+              "beta_max": 2.8673121419052725,
+              "beta_mean": 0.8401169561058538,
+              "dead": {
+                "dead_rel": 1e-06,
+                "dead_count": 0,
+                "dead_frac": 0.0,
+                "denominator": 521.7892239426537,
+                "scope": "per retained key j: c_j = w_j * sum_i A_ij; c_j < DEAD_REL * sum_j c_j. The denominator is the sum over retained keys only, and A is the beta design matrix stacked over all n_ref calibration queries."
+              }
+            },
+            "mass_residual": {
+              "status": "APPLICABLE",
+              "aggregation": "pooled_over_all_calibration_queries",
+              "normalized": 0.23996369189279532,
+              "raw": 37.366381621746775,
+              "denominator": 155.7168141855408,
+              "n_ref": 12
+            },
+            "payload": {
+              "counted_for": "this edge only",
+              "t": 6,
+              "dk": 8,
+              "dv": 8,
+              "dtype_bytes": 8,
+              "keys_bytes": 384,
+              "values_bytes": 384,
+              "beta_bytes": 48,
+              "indices_bytes": 24,
+              "meta_bytes": 32,
+              "bytes": 872,
+              "bits_per_source_token": 72.66666666666667
+            },
+            "position": {
+              "logical_len": 96,
+              "source_len": 96,
+              "span": [
+                0,
+                96
+              ],
+              "rope_phase_verified": false
+            },
+            "solver": {
+              "method": "householder_qr_f64_cpu",
+              "beta_status": "ok",
+              "value_status": "ok",
+              "fallback_used": false,
+              "diagnostics_separate_from_solve": true
+            }
+          },
+          {
+            "label": "edge-1",
+            "edge": {
+              "source": "source",
+              "destination": 1
+            },
+            "budget_tokens": 8,
+            "inner_schema": "dcckv-edge-record/1",
+            "payload_digest": "575966328f39723ff3b28502d4246baa967e3cf8f70a601afa6a01dbc99ab109",
+            "key_selection": {
+              "status": "APPLICABLE",
+              "selector": "softmax_rms",
+              "beta_mode": "box",
+              "value_mode": "ols",
+              "budget_tokens": 8,
+              "n_ref": 16,
+              "query_hash": "e5260b06ef99f0c73e578bac7248a4b31f41362b42b1951272bd33c82e3c2812",
+              "indices": "5bfddce6d87e560ae314d3587c48ef7189ed5157c6e9faeaecdaface5991f116",
+              "n_indices": 8,
+              "heldout": {
+                "n": 6,
+                "query_hash": "a54bdf5556187b611e06b7cc3606eb00488d27e43792418b4f4c13ef793619dd"
+              }
+            },
+            "beta_design": {
+              "status": "APPLICABLE",
+              "problem": "beta_box_ls",
+              "method": "householder_qr_f64_cpu",
+              "n": 16,
+              "p": 8,
+              "rank": 8,
+              "cond": 128.94391538111358,
+              "sigma_min": 0.01887444431010016,
+              "sigma_max": 2.433744749987096,
+              "tol": 8.646398263988061e-15,
+              "rank_deficient": false
+            },
+            "value_design": {
+              "status": "APPLICABLE",
+              "problem": "value_ols",
+              "method": "householder_qr_f64_cpu",
+              "n": 16,
+              "p": 8,
+              "rank": 8,
+              "cond": 3876.3176619967753,
+              "sigma_min": 0.00030203816884926993,
+              "sigma_max": 1.1707958885075893,
+              "tol": 4.159502568184299e-15,
+              "rank_deficient": false
+            },
+            "beta_binding": {
+              "status": "APPLICABLE",
+              "lo": -3.0,
+              "hi": 3.0,
+              "bind_tol": 1e-06,
+              "bind_hi_count": 2,
+              "bind_hi_frac": 0.25,
+              "bind_lo_count": 1,
+              "bind_lo_frac": 0.125,
+              "beta_min": -3.0,
+              "beta_max": 3.0,
+              "beta_mean": 1.1496910766374675,
+              "dead": {
+                "dead_rel": 1e-06,
+                "dead_count": 0,
+                "dead_frac": 0.0,
+                "denominator": 737.4319479871683,
+                "scope": "per retained key j: c_j = w_j * sum_i A_ij; c_j < DEAD_REL * sum_j c_j. The denominator is the sum over retained keys only, and A is the beta design matrix stacked over all n_ref calibration queries."
+              }
+            },
+            "mass_residual": {
+              "status": "APPLICABLE",
+              "aggregation": "pooled_over_all_calibration_queries",
+              "normalized": 0.20624485060971787,
+              "raw": 42.060896732242945,
+              "denominator": 203.93671215499,
+              "n_ref": 16
+            },
+            "payload": {
+              "counted_for": "this edge only",
+              "t": 8,
+              "dk": 8,
+              "dv": 8,
+              "dtype_bytes": 8,
+              "keys_bytes": 512,
+              "values_bytes": 512,
+              "beta_bytes": 64,
+              "indices_bytes": 32,
+              "meta_bytes": 32,
+              "bytes": 1152,
+              "bits_per_source_token": 96.0
+            },
+            "position": {
+              "logical_len": 96,
+              "source_len": 96,
+              "span": [
+                0,
+                96
+              ],
+              "rope_phase_verified": false
+            },
+            "solver": {
+              "method": "householder_qr_f64_cpu",
+              "beta_status": "ok",
+              "value_status": "ok",
+              "fallback_used": false,
+              "diagnostics_separate_from_solve": true
+            }
+          },
+          {
+            "label": "edge-2",
+            "edge": {
+              "source": "source",
+              "destination": 2
+            },
+            "budget_tokens": 10,
+            "inner_schema": "dcckv-edge-record/1",
+            "payload_digest": "db8d3d5c4c8970b7b0e34f4bb05f7e19fe60558be9f70302f12607615c1e456c",
+            "key_selection": {
+              "status": "APPLICABLE",
+              "selector": "softmax_rms",
+              "beta_mode": "box",
+              "value_mode": "ols",
+              "budget_tokens": 10,
+              "n_ref": 20,
+              "query_hash": "6fc7a24086b6ac433ca156c84f8d4d364d1314dd5fe38d9133d835f499c2ea4d",
+              "indices": "121bc7714422b969fc7b927c62891e55700df1211ed2e1cd1a3582233ff3ebb0",
+              "n_indices": 10,
+              "heldout": {
+                "n": 6,
+                "query_hash": "57a7437dcef6e837c6b8766b8b07924749319599192c150f73470dbdcc016f37"
+              }
+            },
+            "beta_design": {
+              "status": "APPLICABLE",
+              "problem": "beta_box_ls",
+              "method": "householder_qr_f64_cpu",
+              "n": 20,
+              "p": 10,
+              "rank": 10,
+              "cond": 1437.1939168653432,
+              "sigma_min": 0.0022145555989248455,
+              "sigma_max": 3.1827458353348748,
+              "tol": 1.413423083167442e-14,
+              "rank_deficient": false
+            },
+            "value_design": {
+              "status": "APPLICABLE",
+              "problem": "value_ols",
+              "method": "householder_qr_f64_cpu",
+              "n": 20,
+              "p": 10,
+              "rank": 10,
+              "cond": 9547.31345613521,
+              "sigma_min": 4.7373067725005835e-05,
+              "sigma_max": 0.45228552694935287,
+              "tol": 2.008551222895573e-15,
+              "rank_deficient": false
+            },
+            "beta_binding": {
+              "status": "APPLICABLE",
+              "lo": -3.0,
+              "hi": 3.0,
+              "bind_tol": 1e-06,
+              "bind_hi_count": 0,
+              "bind_hi_frac": 0.0,
+              "bind_lo_count": 4,
+              "bind_lo_frac": 0.4,
+              "beta_min": -3.0,
+              "beta_max": 2.773345170503314,
+              "beta_mean": 0.3545568846671328,
+              "dead": {
+                "dead_rel": 1e-06,
+                "dead_count": 0,
+                "dead_frac": 0.0,
+                "denominator": 755.8057841948067,
+                "scope": "per retained key j: c_j = w_j * sum_i A_ij; c_j < DEAD_REL * sum_j c_j. The denominator is the sum over retained keys only, and A is the beta design matrix stacked over all n_ref calibration queries."
+              }
+            },
+            "mass_residual": {
+              "status": "APPLICABLE",
+              "aggregation": "pooled_over_all_calibration_queries",
+              "normalized": 0.22761734941576325,
+              "raw": 39.725769505924866,
+              "denominator": 174.52874136304183,
+              "n_ref": 20
+            },
+            "payload": {
+              "counted_for": "this edge only",
+              "t": 10,
+              "dk": 8,
+              "dv": 8,
+              "dtype_bytes": 8,
+              "keys_bytes": 640,
+              "values_bytes": 640,
+              "beta_bytes": 80,
+              "indices_bytes": 40,
+              "meta_bytes": 32,
+              "bytes": 1432,
+              "bits_per_source_token": 119.33333333333333
+            },
+            "position": {
+              "logical_len": 96,
+              "source_len": 96,
+              "span": [
+                0,
+                96
+              ],
+              "rope_phase_verified": false
+            },
+            "solver": {
+              "method": "householder_qr_f64_cpu",
+              "beta_status": "ok",
+              "value_status": "ok",
+              "fallback_used": false,
+              "diagnostics_separate_from_solve": true
+            }
+          }
+        ],
+        "destination_semantics": {
+          "status": "APPLICABLE",
+          "shared_query_set": false,
+          "per_destination_queries": true,
+          "query_hashes": [
+            "bdb5578eb376daa46387c76ec123afc16bef11c01feacd904455c0e2d30f3a61",
+            "e5260b06ef99f0c73e578bac7248a4b31f41362b42b1951272bd33c82e3c2812",
+            "6fc7a24086b6ac433ca156c84f8d4d364d1314dd5fe38d9133d835f499c2ea4d"
+          ],
+          "note": "each destination draws from its own pool"
+        },
+        "note": "each Source->Destination edge carries its own budget, rank/cond pair and payload"
+      },
+      "upstream_refs": [
+        {
+          "stage": "2A",
+          "experiment_id": "2a-cpu-closure-v1",
+          "verdict": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+          "note": "reference only: the 2A numbers are not used as 2D measurements"
+        }
+      ],
+      "verdict": {
+        "overall": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+        "ceiling": "PASS_CPU_SEMANTICS",
+        "evidence_level": "structural_cpu",
+        "partial": {
+          "sp": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+          "compact": "PASS_CPU_SEMANTICS",
+          "destination": "PASS_CPU_SEMANTICS"
+        },
+        "blocked_requires_gpu": [
+          "sp.rank_topology",
+          "sp.owner_kv_resident",
+          "sp.remote_staging",
+          "sp.no_full_copy",
+          "sp.communication"
+        ],
+        "failed": [],
+        "checks": [
+          {
+            "id": "compact.key_selection.edge-0",
+            "group": "compact",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "n_indices": 6,
+              "budget_tokens": 6
+            }
+          },
+          {
+            "id": "compact.beta_design.edge-0",
+            "group": "compact",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "rank": 6,
+              "cond": 121.14156006310981,
+              "rank_deficient": false
+            }
+          },
+          {
+            "id": "compact.value_design.edge-0",
+            "group": "compact",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "rank": 6,
+              "cond": 43481.50972111544,
+              "rank_deficient": false
+            }
+          },
+          {
+            "id": "compact.beta_binding.edge-0",
+            "group": "compact",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "bind_hi_frac": 0.0,
+              "bind_lo_frac": 0.3333333333333333,
+              "dead_frac": 0.0
+            }
+          },
+          {
+            "id": "compact.mass_residual.edge-0",
+            "group": "compact",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "normalized": 0.23996369189279532,
+              "aggregation": "pooled_over_all_calibration_queries"
+            }
+          },
+          {
+            "id": "compact.key_selection.edge-1",
+            "group": "compact",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "n_indices": 8,
+              "budget_tokens": 8
+            }
+          },
+          {
+            "id": "compact.beta_design.edge-1",
+            "group": "compact",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "rank": 8,
+              "cond": 128.94391538111358,
+              "rank_deficient": false
+            }
+          },
+          {
+            "id": "compact.value_design.edge-1",
+            "group": "compact",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "rank": 8,
+              "cond": 3876.3176619967753,
+              "rank_deficient": false
+            }
+          },
+          {
+            "id": "compact.beta_binding.edge-1",
+            "group": "compact",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "bind_hi_frac": 0.25,
+              "bind_lo_frac": 0.125,
+              "dead_frac": 0.0
+            }
+          },
+          {
+            "id": "compact.mass_residual.edge-1",
+            "group": "compact",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "normalized": 0.20624485060971787,
+              "aggregation": "pooled_over_all_calibration_queries"
+            }
+          },
+          {
+            "id": "compact.key_selection.edge-2",
+            "group": "compact",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "n_indices": 10,
+              "budget_tokens": 10
+            }
+          },
+          {
+            "id": "compact.beta_design.edge-2",
+            "group": "compact",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "rank": 10,
+              "cond": 1437.1939168653432,
+              "rank_deficient": false
+            }
+          },
+          {
+            "id": "compact.value_design.edge-2",
+            "group": "compact",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "rank": 10,
+              "cond": 9547.31345613521,
+              "rank_deficient": false
+            }
+          },
+          {
+            "id": "compact.beta_binding.edge-2",
+            "group": "compact",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "bind_hi_frac": 0.0,
+              "bind_lo_frac": 0.4,
+              "dead_frac": 0.0
+            }
+          },
+          {
+            "id": "compact.mass_residual.edge-2",
+            "group": "compact",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "normalized": 0.22761734941576325,
+              "aggregation": "pooled_over_all_calibration_queries"
+            }
+          },
+          {
+            "id": "sp.rank_topology",
+            "group": "sp",
+            "status": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+            "detail": {
+              "note": "no SP process in this CPU run; topology is declared, not run"
+            }
+          },
+          {
+            "id": "sp.owner_kv_resident",
+            "group": "sp",
+            "status": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+            "detail": {
+              "note": "dense KV residency is a 2A measurement"
+            }
+          },
+          {
+            "id": "sp.remote_staging",
+            "group": "sp",
+            "status": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+            "detail": {
+              "note": "no remote blocks are staged without an SP run"
+            }
+          },
+          {
+            "id": "sp.no_full_copy",
+            "group": "sp",
+            "status": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+            "detail": {
+              "note": "the negative arm needs a real SP run to be meaningful"
+            }
+          },
+          {
+            "id": "sp.communication",
+            "group": "sp",
+            "status": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+            "detail": {
+              "note": "no NCCL, no all_to_all_v; nothing to measure"
+            }
+          },
+          {
+            "id": "destination.independence",
+            "group": "destination",
+            "status": "PASS_CPU_SEMANTICS",
+            "detail": {
+              "distinct_query_hashes": 3,
+              "destinations": 3
+            }
+          }
+        ]
+      },
+      "notes": []
+    }
+  },
+  "records_summary": {
+    "2A": {
+      "experiment_id": "2a-cpu-closure-v1",
+      "stage": "2A",
+      "overall": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+      "partial": {
+        "sp": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+        "compact": "NOT_APPLICABLE",
+        "destination": "NOT_APPLICABLE"
+      },
+      "blocked_requires_gpu": [
+        "sp.backend",
+        "sp.communication"
+      ],
+      "compact_status": "NOT_APPLICABLE",
+      "sp_status": "APPLICABLE"
+    },
+    "2D": {
+      "experiment_id": "2d-cpu-closure-v1",
+      "stage": "2D",
+      "overall": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+      "partial": {
+        "sp": "BLOCKED_CPU_NO_GPU_EVIDENCE",
+        "compact": "PASS_CPU_SEMANTICS",
+        "destination": "PASS_CPU_SEMANTICS"
+      },
+      "blocked_requires_gpu": [
+        "sp.rank_topology",
+        "sp.owner_kv_resident",
+        "sp.remote_staging",
+        "sp.no_full_copy",
+        "sp.communication"
+      ],
+      "compact_status": "APPLICABLE",
+      "sp_status": "MISSING"
+    }
+  }
+}

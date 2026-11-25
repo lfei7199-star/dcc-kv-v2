@@ -1,0 +1,64 @@
+# ============================================================
+# 首版公开范围：只收 A 层（CPU 参考实现 + 测试 + 干净设计档）
+# 每一段排除都写明理由，不做「顺手忽略」
+# ============================================================
+
+# --- 旧库冻结代码副本 ---
+# 与 v2 零 import 依赖（已实测），但其中含集群分区名、账号、sbatch 提交脚本，
+# 且属于冻结基线，不因公开而重新整理。原样留在本地。
+src/legacy/
+
+# --- 工作区记忆与审计产物 ---
+# 含内网地址、账号、SSH 端口、本地绝对路径。
+.workbuddy/
+_audit_tmp/
+00_handover/
+
+# --- 数据集身份映射 ---
+# data/pilot/clusters.json 是真实数据集（narrativeqa test 子集）的行身份映射，
+# 不含分数与判决，但不在首版 A 层白名单内，待单独裁定后再决定是否公开。
+data/
+
+# --- 设计原件中含本地路径或集群分区名的 6 份 ---
+# 首版不公开；后续若需公开，另做 docs/sanitized/ 副本并声明「非冻结原件」，
+# 不修改原件的任何字节。
+design/10_*
+design/11_*
+design/12_*
+design/20_*
+design/21_*
+
+# --- 运行产物 ---
+runs/
+paper/
+*.log
+*.out
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- 张量 / 大数据 / 模型权重 ---
+# 单元测试只用合成小数组，不需要任何二进制 fixture。
+*.pt
+*.pth
+*.bin
+*.ckpt
+*.safetensors
+*.npz
+*.npy
+*.parquet
+*.jsonl
+
+# --- 凭据 ---
+.env
+.env.*
+*.key
+*.pem
+id_rsa*
+id_ed25519*
