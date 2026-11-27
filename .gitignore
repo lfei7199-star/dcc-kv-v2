@@ -19,10 +19,9 @@ _audit_tmp/
 # 目录级排除，不逐文件判断「今天这份安全吗」。
 00_handover/
 
-# --- pilot 实验输入与身份映射 ---
-# 实验冻结输入（评测集索引、数据集来源、prompt 规格、token 元数据、
-# 簇身份映射）。随 pilot 工作区管理；公开侧只发布形状摘要，
-# 不发布清单与逐行身份。
+# --- Pilot / experimental inputs ---
+# Frozen experiment inputs and derived identity mappings remain outside
+# the public repository.
 data/
 
 # --- design/：默认全部不公开，逐份显式放行 ---
