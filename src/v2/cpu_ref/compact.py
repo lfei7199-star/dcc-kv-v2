@@ -3,7 +3,7 @@
 Fidelity target
 ---------------
 Zweiger, Fu, Guo, Kim. *Fast KV Compaction via Attention Matching.*
-ICML 2026, PMLR 306 (arXiv:2602.16284v2). Local copy: Desktop/fast kv.pdf.
+ICML 2026, PMLR 306 (arXiv:2602.16284v2).
 
 Every step below cites the section it reproduces:
 
