@@ -137,6 +137,17 @@ python tools/validate_pilot.py results/pilot --json
 
 ## Statistical design
 
+### Pilot input shape（统计摘要，不含输入内容）
+
+> The pilot manifest contains 200 evaluation rows grouped into 182 input clusters
+> (164 singleton clusters and 18 duplicate-input clusters).
+
+这条形状是 `se_cluster_w` 里 `m_c ∈ {1, 2}` 的唯一来源。逐行身份映射
+（`clusters.json`、逐行 `input_sha256`）与 200 行评测集本身属于**实验冻结输入**，
+不在本仓库——它们随 pilot 工作区管理，不随公开代码发布。
+
+### 方差估计
+
 方差估计是本仓库的方法论重点，已冻结：
 
 ```

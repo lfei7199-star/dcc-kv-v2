@@ -1,0 +1,24 @@
+# 统一入库行尾为 LF。
+#
+# 背景（2026-11-27 接管基线体检）：
+#   基线 c30328c 里有 7 个 tracked 文件是 CRLF，其余 31 个是 LF。
+#   其中 src/v2/cpu_ref/compact.py 的一次单行 docstring 修改把整文件
+#   转了行尾，导致 1 行真实改动在 diff 里显示成 1794 行。
+#   行尾不一致本身不影响 Python 语义，但它会让 code review 失效——
+#   审查者看到的是整文件重写，看不到那 1 行。
+#
+# 本文件只声明规则，**不**对已有 CRLF 文件做 renormalize。
+# 那会把 6 个历史文件的每一行都变成 diff，用噪声掩盖真实改动。
+# 规则在文件下次被修改时自然生效：git 会按 eol=lf 归一化后入库。
+* text=auto eol=lf
+
+# 二进制不做行尾转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.npz binary
+*.pt binary
+*.pth binary
+*.safetensors binary
